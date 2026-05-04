@@ -37,7 +37,7 @@ Run through the items below in order. Each maps to one or more acceptance scenar
 
 1. Ensure no `cpu-mem-overlay.toml` exists next to the built executable (typically `target/release/cpu-mem-overlay.exe`).
 2. Run the binary.
-3. **Expected**: overlay appears in the bottom-right corner of the primary monitor's work area, opaque background, default font size, refresh once per second. Behavior is indistinguishable from v1.
+3. **Expected**: overlay appears in the bottom-left corner of the primary monitor's work area (v2 default), fully transparent background (only the two metric lines visible over the desktop), default font size, refresh once per second.
 
 ### Step 2 — Custom refresh interval
 

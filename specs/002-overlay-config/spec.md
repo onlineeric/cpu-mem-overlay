@@ -25,7 +25,7 @@ A user wants to adapt the overlay to their own desktop setup — different refre
 
 **Acceptance Scenarios**:
 
-1. **Given** no `cpu-mem-overlay.toml` exists next to the executable, **When** the user launches the overlay, **Then** the overlay starts with all v1 defaults (1000 ms refresh, bottom-right of the primary monitor's work area, opaque v1 background, v1 text size) and runs without error.
+1. **Given** no `cpu-mem-overlay.toml` exists next to the executable, **When** the user launches the overlay, **Then** the overlay starts with v2 defaults (1000 ms refresh, bottom-left of the primary monitor's work area, fully transparent background — only the metric text is visible — and v1 text size) and runs without error.
 2. **Given** a valid `cpu-mem-overlay.toml` is present with a complete set of supported keys, **When** the user launches the overlay, **Then** every configured value is applied and the overlay reflects all four settings simultaneously.
 3. **Given** a `cpu-mem-overlay.toml` is present but contains an invalid value for one setting (e.g., a negative refresh interval), **When** the user launches the overlay, **Then** only that setting reverts to its default and the remaining settings still take effect; the overlay starts without crashing.
 4. **Given** a `cpu-mem-overlay.toml` is present whose entire contents cannot be parsed as TOML, **When** the user launches the overlay, **Then** the overlay starts using all defaults and runs without error.
@@ -113,7 +113,7 @@ A user occasionally wants to nudge the overlay out of the way of an open window 
 - **FR-013**: The overlay MUST support a `background_color` setting that accepts a color value with an alpha channel, allowing any color from fully opaque to fully transparent.
 - **FR-014**: When `background_color` is set to a fully transparent value, the overlay window MUST render only the metric text over whatever desktop content lies beneath; no opaque background MUST be drawn.
 - **FR-014a**: The overlay window MUST continue to capture mouse input (hover, click, drag) regardless of the configured `background_color` and its alpha. A fully transparent background MUST NOT make the window click-through; mouse events occurring over the window's pixel rectangle MUST be delivered to the overlay, not to whatever lies beneath it.
-- **FR-015**: The default `background_color` MUST match v1's opaque background so that omitting the key reproduces the v1 appearance.
+- **FR-015**: The default `background_color` MUST be fully transparent (alpha = 0) so that, without a config file, the overlay renders only the metric text on top of the desktop. Users who want a solid (or semi-transparent) tile MUST explicitly set `background_color`.
 
 #### Configurable font size
 

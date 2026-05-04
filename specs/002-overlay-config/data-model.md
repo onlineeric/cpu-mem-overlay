@@ -16,7 +16,7 @@ A snapshot of resolved user preferences, read once at startup and held immutably
 |-----------------------|-----------|-----------------------------------------|----------------------------------|------------|
 | `refresh_interval`    | `Duration`| `>= 100 ms`                             | `1000 ms`                        | FR-007, FR-009 |
 | `anchor`              | `Anchor`  | `Default` or `VirtualScreen { x, y }`   | `Anchor::Default`                | FR-010, FR-011 |
-| `background_color`    | `[u8; 4]` | `[r, g, b, a]`, each `0..=255`          | `[27, 27, 27, 255]` (eframe dark `panel_fill`, the colour v1 inherits implicitly) | FR-013, FR-015 |
+| `background_color`    | `[u8; 4]` | `[r, g, b, a]`, each `0..=255`          | `[0, 0, 0, 0]` (fully transparent — only the metric text renders) | FR-013, FR-015 |
 | `font_size`           | `f32`     | `> 0.0` and `<= 256.0` (sane upper)     | `14.0` (v1 baseline)             | FR-016, FR-018 |
 | `draggable`           | `bool`    | `true` / `false`                        | `false`                          | FR-021 |
 

@@ -85,7 +85,7 @@ draggable = true
 |----------------------|-------------------------------------------------------|----------------------------|
 | `refresh_interval_ms`| TOML integer, `>= 100`                                | `1000`                     |
 | `anchor_position`    | TOML array of two integers                             | bottom-right of primary work area (computed at startup) |
-| `background_color`   | TOML string, `"#RRGGBB"` or `"#RRGGBBAA"`, case-insensitive | v1 opaque background  |
+| `background_color`   | TOML string, `"#RRGGBB"` or `"#RRGGBBAA"`, case-insensitive | `"#00000000"` (fully transparent — only the metric text renders) |
 | `font_size`          | TOML number, finite, `> 0` and `<= 256`               | `14`                       |
 | `draggable`          | TOML boolean                                           | `false`                    |
 

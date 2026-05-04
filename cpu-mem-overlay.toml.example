@@ -20,14 +20,14 @@ refresh_interval_ms = 1000
 
 # RGBA background color. "#RRGGBB" implies alpha = FF (opaque).
 # "#RRGGBBAA" sets alpha explicitly; "00" alpha = fully transparent.
-# Default: "#1B1B1BFF" (eframe dark panel_fill — matches v1's implicit background).
-background_color = "#1B1B1BFF"
+# Default: "#00000000" (fully transparent — only the metric text is rendered).
+# background_color = "#00000000"
 
 # Font size for both metric lines (logical pixels). Positive number, max 256.
 # The window auto-fits to contain both lines without clipping. Default: 14.
-font_size = 14
+font_size = 12
 
 # Allow click-drag to reposition the overlay during the current session.
 # Drag positions are NOT persisted; relaunching restores anchor_position
 # (or its fallback). Default: false.
-draggable = false
+draggable = true

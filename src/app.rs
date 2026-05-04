@@ -33,10 +33,7 @@ pub(crate) fn should_sample(now: Instant, last_sample_at: Instant, interval: Dur
     now.saturating_duration_since(last_sample_at) >= interval
 }
 
-pub(crate) fn primary_work_area_bottom_left(
-    window_size: egui::Vec2,
-    margin_px: f32,
-) -> egui::Pos2 {
+pub(crate) fn primary_work_area_bottom_left(window_size: egui::Vec2, margin_px: f32) -> egui::Pos2 {
     use core::ffi::c_void;
     use windows::Win32::Foundation::RECT;
     use windows::Win32::UI::WindowsAndMessaging::{
@@ -68,7 +65,7 @@ pub(crate) struct OverlayApp {
     sampler: Sampler,
     snapshot: MetricSnapshot,
     last_sample_at: Instant,
-    clear_color_normalized: [f32; 4],
+    background: egui::Color32,
 }
 
 impl OverlayApp {
@@ -83,19 +80,18 @@ impl OverlayApp {
             sampler: Sampler::new(),
             snapshot: MetricSnapshot::default(),
             last_sample_at,
-            clear_color_normalized: [
-                r as f32 / 255.0,
-                g as f32 / 255.0,
-                b as f32 / 255.0,
-                a as f32 / 255.0,
-            ],
+            background: egui::Color32::from_rgba_unmultiplied(r, g, b, a),
         }
     }
 }
 
 impl App for OverlayApp {
     fn clear_color(&self, _visuals: &egui::Visuals) -> [f32; 4] {
-        self.clear_color_normalized
+        // Always clear to fully transparent; the panel's Frame::fill paints
+        // the actual configured background color (with correct alpha
+        // blending). This keeps the OS-level window transparency available
+        // when the configured alpha is 0.
+        [0.0, 0.0, 0.0, 0.0]
     }
 
     fn update(&mut self, ctx: &egui::Context, _frame: &mut Frame) {
@@ -105,28 +101,37 @@ impl App for OverlayApp {
             self.last_sample_at = now;
         }
 
-        egui::CentralPanel::default().show(ctx, |ui| {
-            if self.config.draggable {
-                let response = ui.interact(
-                    ui.max_rect(),
-                    egui::Id::new("overlay-drag"),
-                    egui::Sense::drag(),
-                );
-                if response.drag_started() {
-                    ctx.send_viewport_cmd(egui::ViewportCommand::StartDrag);
+        let panel_frame = egui::Frame::central_panel(&ctx.style()).fill(self.background);
+        egui::CentralPanel::default()
+            .frame(panel_frame)
+            .show(ctx, |ui| {
+                if self.config.draggable {
+                    let response = ui.interact(
+                        ui.max_rect(),
+                        egui::Id::new("overlay-drag"),
+                        egui::Sense::drag(),
+                    );
+                    if response.drag_started() {
+                        ctx.send_viewport_cmd(egui::ViewportCommand::StartDrag);
+                    }
                 }
-            }
-            ui.vertical(|ui| {
-                ui.label(
-                    egui::RichText::new(format_line("CPU", self.snapshot.cpu))
-                        .size(self.config.font_size),
-                );
-                ui.label(
-                    egui::RichText::new(format_line("MEM", self.snapshot.memory))
-                        .size(self.config.font_size),
-                );
+                ui.vertical(|ui| {
+                    ui.add(
+                        egui::Label::new(
+                            egui::RichText::new(format_line("CPU", self.snapshot.cpu))
+                                .size(self.config.font_size),
+                        )
+                        .selectable(false),
+                    );
+                    ui.add(
+                        egui::Label::new(
+                            egui::RichText::new(format_line("MEM", self.snapshot.memory))
+                                .size(self.config.font_size),
+                        )
+                        .selectable(false),
+                    );
+                });
             });
-        });
 
         let elapsed = now.saturating_duration_since(self.last_sample_at);
         let next = self.config.refresh_interval.saturating_sub(elapsed);
