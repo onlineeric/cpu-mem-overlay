@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 <!-- SPECKIT START -->
 For additional context about technologies to be used, project structure,
 shell commands, and other important information, read the current plan:
-specs/001-cpu-mem-overlay/plan.md
+specs/002-overlay-config/plan.md
 <!-- SPECKIT END -->
 
 ## Rust coding

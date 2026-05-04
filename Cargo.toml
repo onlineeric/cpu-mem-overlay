@@ -14,7 +14,10 @@ sysinfo = { version = "0.32", default-features = true }
 windows = { version = "0.58", features = [
     "Win32_Foundation",
     "Win32_UI_WindowsAndMessaging",
+    "Win32_Graphics_Gdi",
 ] }
+serde = { version = "1", features = ["derive"] }
+toml = "0.8"
 
 [profile.release]
 lto = true
