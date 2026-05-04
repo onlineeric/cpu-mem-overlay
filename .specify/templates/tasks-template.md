@@ -8,7 +8,7 @@ description: "Task list template for feature implementation"
 **Input**: Design documents from `/specs/[###-feature-name]/`
 **Prerequisites**: plan.md (required), spec.md (required for user stories), research.md, data-model.md, contracts/
 
-**Tests**: The examples below include test tasks. Tests are OPTIONAL - only include them if explicitly requested in the feature specification.
+**Tests**: Per the project constitution (Principle II — Comprehensive Unit Test Coverage, NON-NEGOTIABLE), unit tests for non-trivial logic are MANDATORY for every user story. Contract / integration tests remain OPTIONAL and are included only when called for by the feature specification.
 
 **Organization**: Tasks are grouped by user story to enable independent implementation and testing of each story.
 
@@ -79,9 +79,12 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 1 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 1 ⚠️
 
-> **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
+> **NOTE**: Unit tests for non-trivial logic in this story are MANDATORY per
+> constitution Principle II. Contract / integration tests are OPTIONAL and
+> included only when the feature spec asks for them. Where TDD is feasible,
+> write tests FIRST and ensure they FAIL before implementation.
 
 - [ ] T010 [P] [US1] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T011 [P] [US1] Integration test for [user journey] in tests/integration/test_[name].py
@@ -105,7 +108,9 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 2 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 2 ⚠️
+
+> **NOTE**: Unit tests for non-trivial logic are MANDATORY per constitution Principle II. Contract / integration tests are OPTIONAL.
 
 - [ ] T018 [P] [US2] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T019 [P] [US2] Integration test for [user journey] in tests/integration/test_[name].py
@@ -127,7 +132,9 @@ Examples of foundational tasks (adjust based on your project):
 
 **Independent Test**: [How to verify this story works on its own]
 
-### Tests for User Story 3 (OPTIONAL - only if tests requested) ⚠️
+### Tests for User Story 3 ⚠️
+
+> **NOTE**: Unit tests for non-trivial logic are MANDATORY per constitution Principle II. Contract / integration tests are OPTIONAL.
 
 - [ ] T024 [P] [US3] Contract test for [endpoint] in tests/contract/test_[name].py
 - [ ] T025 [P] [US3] Integration test for [user journey] in tests/integration/test_[name].py
@@ -148,14 +155,21 @@ Examples of foundational tasks (adjust based on your project):
 
 ## Phase N: Polish & Cross-Cutting Concerns
 
-**Purpose**: Improvements that affect multiple user stories
+**Purpose**: Improvements that affect multiple user stories, plus the
+constitution-mandated self-review and test-green gates.
 
 - [ ] TXXX [P] Documentation updates in docs/
 - [ ] TXXX Code cleanup and refactoring
 - [ ] TXXX Performance optimization across all stories
-- [ ] TXXX [P] Additional unit tests (if requested) in tests/unit/
+- [ ] TXXX [P] Fill any unit-test coverage gaps in tests/unit/ (Principle II)
 - [ ] TXXX Security hardening
 - [ ] TXXX Run quickstart.md validation
+- [ ] TXXX **Self-review pass** (Principle III): re-read the full diff against
+      `rust-skills` and project coding preferences; refactor before declaring
+      the feature done
+- [ ] TXXX **Test-green gate** (Principle IV): run the full test suite (e.g.,
+      `cargo test`) and confirm zero failures and zero unjustified `#[ignore]`s
+      before declaring the feature complete
 
 ---
 

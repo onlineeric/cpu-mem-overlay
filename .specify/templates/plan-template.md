@@ -31,7 +31,26 @@
 
 *GATE: Must pass before Phase 0 research. Re-check after Phase 1 design.*
 
-[Gates determined based on constitution file]
+Evaluate this plan against each principle in `.specify/memory/constitution.md`.
+For each gate, record PASS / FAIL / N/A and a one-line justification. Any FAIL
+MUST be either eliminated from the plan or moved to Complexity Tracking with a
+written justification.
+
+- **Principle I — Rust Best Practices via rust-skills**: Does the plan commit
+  to consulting `rust-skills` for the relevant Rust categories used by this
+  feature?
+- **Principle II — Comprehensive Unit Test Coverage (NON-NEGOTIABLE)**: Does
+  the plan identify which modules/functions will receive unit tests and which
+  branches/edge cases will be asserted? UI-only behavior may be deferred to
+  manual smoke tests, but pure logic MUST be unit-tested.
+- **Principle III — Post-Implementation Self-Review**: Does the plan include
+  an explicit self-review step before the feature is declared complete?
+- **Principle IV — Green Tests Before Done (NON-NEGOTIABLE)**: Does the plan
+  include a final `cargo test` (or equivalent) gate that MUST be green before
+  completion?
+
+**Initial gate**: [PASS / FAIL — explain]
+**Post-design re-check**: [PASS / FAIL — explain]
 
 ## Project Structure
 
