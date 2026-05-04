@@ -18,7 +18,7 @@ const CONFIG_FILENAME: &str = "cpu-mem-overlay.toml";
 const DEFAULT_REFRESH_INTERVAL_MS: u64 = 1000;
 const MIN_REFRESH_INTERVAL_MS: u64 = 100;
 const DEFAULT_BACKGROUND_COLOR: [u8; 4] = [27, 27, 27, 255];
-const DEFAULT_FONT_SIZE: f32 = 14.0;
+const DEFAULT_FONT_SIZE: f32 = 12.0;
 const MAX_FONT_SIZE: f32 = 256.0;
 const DEFAULT_DRAGGABLE: bool = false;
 

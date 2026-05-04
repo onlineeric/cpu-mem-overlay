@@ -14,6 +14,8 @@ use crate::config::OverlayConfig;
 use crate::sampler::{format_line, MetricSnapshot, Sampler};
 
 pub(crate) const POSITION_MARGIN_PX: f32 = 12.0;
+const WORK_AREA_BOTTOM_LEFT_X_OFFSET_PX: f32 = 150.0;
+const WORK_AREA_BOTTOM_LEFT_Y_OFFSET_PX: f32 = 55.0;
 
 const V1_FONT_SIZE: f32 = 14.0;
 const V1_WINDOW_WIDTH: f32 = 96.0;
@@ -31,7 +33,7 @@ pub(crate) fn should_sample(now: Instant, last_sample_at: Instant, interval: Dur
     now.saturating_duration_since(last_sample_at) >= interval
 }
 
-pub(crate) fn primary_work_area_bottom_right(
+pub(crate) fn primary_work_area_bottom_left(
     window_size: egui::Vec2,
     margin_px: f32,
 ) -> egui::Pos2 {
@@ -51,14 +53,13 @@ pub(crate) fn primary_work_area_bottom_right(
         )
     };
     if result.is_err() {
-        return egui::pos2(
-            1920.0 - window_size.x - margin_px,
-            1040.0 - window_size.y - margin_px,
-        );
+        let x = WORK_AREA_BOTTOM_LEFT_X_OFFSET_PX + margin_px;
+        let y = 1040.0 - window_size.y - margin_px + WORK_AREA_BOTTOM_LEFT_Y_OFFSET_PX;
+        return egui::pos2(x.max(0.0), y.max(0.0));
     }
 
-    let x = rect.right as f32 - window_size.x - margin_px;
-    let y = rect.bottom as f32 - window_size.y - margin_px;
+    let x = rect.left as f32 + WORK_AREA_BOTTOM_LEFT_X_OFFSET_PX + margin_px;
+    let y = rect.bottom as f32 - window_size.y - margin_px + WORK_AREA_BOTTOM_LEFT_Y_OFFSET_PX;
     egui::pos2(x.max(0.0), y.max(0.0))
 }
 
