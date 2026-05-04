@@ -1,0 +1,51 @@
+# Rust build artifacts
+/target/
+**/target/
+**/*.rs.bk
+*.pdb
+
+# Cargo
+Cargo.lock.bak
+
+# IDE / Editor (personal settings only — keep shared config tracked)
+.idea/
+.vs/
+*.iml
+*.swp
+*.swo
+*~
+# VS Code: ignore personal state, but allow shared workspace config
+.vscode/*
+!.vscode/settings.json
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+
+# Cursor: commit .cursor/rules/, .cursorrules, .cursorignore (shared AI rules)
+# (nothing to ignore by default)
+
+# Claude Code: commit shared skills/settings, ignore local-only overrides
+.claude/settings.local.json
+
+# Spec Kit (.specify/) is intentionally tracked — do not ignore
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS (in case of cross-platform contributors)
+.DS_Store
+
+# Logs and temp
+*.log
+*.tmp
+*.bak
+
+# Environment / secrets
+.env
+.env.local
+*.pem
+*.key
