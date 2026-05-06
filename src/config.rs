@@ -18,9 +18,11 @@ const CONFIG_FILENAME: &str = "cpu-mem-overlay.toml";
 const DEFAULT_REFRESH_INTERVAL_MS: u64 = 1000;
 const MIN_REFRESH_INTERVAL_MS: u64 = 100;
 const DEFAULT_BACKGROUND_COLOR: [u8; 4] = [0, 0, 0, 0];
+const DEFAULT_FONT_COLOR: [u8; 4] = [255, 255, 255, 255];
 const DEFAULT_FONT_SIZE: f32 = 12.0;
 const MAX_FONT_SIZE: f32 = 256.0;
 const DEFAULT_DRAGGABLE: bool = false;
+const DEFAULT_STARTUP_POSITION: StartupPosition = StartupPosition::BottomRight;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Anchor {
@@ -28,11 +30,19 @@ pub(crate) enum Anchor {
     VirtualScreen { x: i32, y: i32 },
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub(crate) enum StartupPosition {
+    BottomLeft,
+    BottomRight,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub(crate) struct OverlayConfig {
     pub(crate) refresh_interval: Duration,
     pub(crate) anchor: Anchor,
+    pub(crate) startup_position: StartupPosition,
     pub(crate) background_color: [u8; 4],
+    pub(crate) font_color: [u8; 4],
     pub(crate) font_size: f32,
     pub(crate) draggable: bool,
 }
@@ -42,7 +52,9 @@ impl Default for OverlayConfig {
         Self {
             refresh_interval: Duration::from_millis(DEFAULT_REFRESH_INTERVAL_MS),
             anchor: Anchor::Default,
+            startup_position: DEFAULT_STARTUP_POSITION,
             background_color: DEFAULT_BACKGROUND_COLOR,
+            font_color: DEFAULT_FONT_COLOR,
             font_size: DEFAULT_FONT_SIZE,
             draggable: DEFAULT_DRAGGABLE,
         }
@@ -53,7 +65,9 @@ impl Default for OverlayConfig {
 struct RawOverlayConfig {
     refresh_interval_ms: Option<u64>,
     anchor_position: Option<[i32; 2]>,
+    startup_position: Option<String>,
     background_color: Option<String>,
+    font_color: Option<String>,
     font_size: Option<f32>,
     draggable: Option<bool>,
 }
@@ -83,7 +97,9 @@ fn from_raw(raw: RawOverlayConfig) -> OverlayConfig {
     OverlayConfig {
         refresh_interval: validate_refresh_interval_ms(raw.refresh_interval_ms),
         anchor: validate_anchor(raw.anchor_position),
+        startup_position: validate_startup_position(raw.startup_position),
         background_color: validate_background_color(raw.background_color),
+        font_color: validate_font_color(raw.font_color),
         font_size: validate_font_size(raw.font_size),
         draggable: validate_draggable(raw.draggable),
     }
@@ -103,10 +119,25 @@ fn validate_anchor(raw: Option<[i32; 2]>) -> Anchor {
     }
 }
 
+fn validate_startup_position(raw: Option<String>) -> StartupPosition {
+    match raw.as_deref() {
+        Some("bottom_left") => StartupPosition::BottomLeft,
+        Some("bottom_right") => StartupPosition::BottomRight,
+        _ => DEFAULT_STARTUP_POSITION,
+    }
+}
+
 fn validate_background_color(raw: Option<String>) -> [u8; 4] {
     match raw {
         Some(s) => parse_hex_color(&s).unwrap_or(DEFAULT_BACKGROUND_COLOR),
         None => DEFAULT_BACKGROUND_COLOR,
+    }
+}
+
+fn validate_font_color(raw: Option<String>) -> [u8; 4] {
+    match raw {
+        Some(s) => parse_hex_color(&s).unwrap_or(DEFAULT_FONT_COLOR),
+        None => DEFAULT_FONT_COLOR,
     }
 }
 
@@ -158,7 +189,9 @@ mod tests {
         let cfg = parse("refresh_interval_ms = 250\n");
         assert_eq!(cfg.refresh_interval, Duration::from_millis(250));
         assert_eq!(cfg.anchor, Anchor::Default);
+        assert_eq!(cfg.startup_position, DEFAULT_STARTUP_POSITION);
         assert_eq!(cfg.background_color, DEFAULT_BACKGROUND_COLOR);
+        assert_eq!(cfg.font_color, DEFAULT_FONT_COLOR);
         assert_eq!(cfg.font_size, DEFAULT_FONT_SIZE);
         assert!(!cfg.draggable);
     }
@@ -241,6 +274,30 @@ mod tests {
     }
 
     #[test]
+    fn startup_position_bottom_left_accepted() {
+        let cfg = parse("startup_position = \"bottom_left\"\n");
+        assert_eq!(cfg.startup_position, StartupPosition::BottomLeft);
+    }
+
+    #[test]
+    fn startup_position_bottom_right_accepted() {
+        let cfg = parse("startup_position = \"bottom_right\"\n");
+        assert_eq!(cfg.startup_position, StartupPosition::BottomRight);
+    }
+
+    #[test]
+    fn startup_position_missing_defaults_to_bottom_right() {
+        let cfg = parse("");
+        assert_eq!(cfg.startup_position, StartupPosition::BottomRight);
+    }
+
+    #[test]
+    fn startup_position_unknown_value_falls_back() {
+        let cfg = parse("startup_position = \"center\"\n");
+        assert_eq!(cfg.startup_position, DEFAULT_STARTUP_POSITION);
+    }
+
+    #[test]
     fn malformed_background_color_falls_back() {
         let cfg = parse("background_color = \"not a color\"\n");
         assert_eq!(cfg.background_color, DEFAULT_BACKGROUND_COLOR);
@@ -259,6 +316,36 @@ mod tests {
     }
 
     #[test]
+    fn font_color_default_white() {
+        let cfg = parse("");
+        assert_eq!(cfg.font_color, DEFAULT_FONT_COLOR);
+    }
+
+    #[test]
+    fn font_color_black_accepted() {
+        let cfg = parse("font_color = \"#000000\"\n");
+        assert_eq!(cfg.font_color, [0x00, 0x00, 0x00, 0xFF]);
+    }
+
+    #[test]
+    fn font_color_white_accepted() {
+        let cfg = parse("font_color = \"#FFFFFF\"\n");
+        assert_eq!(cfg.font_color, [0xFF, 0xFF, 0xFF, 0xFF]);
+    }
+
+    #[test]
+    fn font_color_alpha_accepted() {
+        let cfg = parse("font_color = \"#11223344\"\n");
+        assert_eq!(cfg.font_color, [0x11, 0x22, 0x33, 0x44]);
+    }
+
+    #[test]
+    fn malformed_font_color_falls_back() {
+        let cfg = parse("font_color = \"not a color\"\n");
+        assert_eq!(cfg.font_color, DEFAULT_FONT_COLOR);
+    }
+
+    #[test]
     fn unknown_key_silently_ignored() {
         let cfg = parse("refresh_interval_ms = 500\nunrecognized_key = \"anything\"\n");
         assert_eq!(cfg.refresh_interval, Duration::from_millis(500));
@@ -269,10 +356,12 @@ mod tests {
         let cfg = parse(concat!(
             "refresh_interval_ms = 500\n",
             "background_color = \"not a color\"\n",
+            "font_color = \"#000000\"\n",
             "font_size = 18.0\n",
         ));
         assert_eq!(cfg.refresh_interval, Duration::from_millis(500));
         assert_eq!(cfg.background_color, DEFAULT_BACKGROUND_COLOR);
+        assert_eq!(cfg.font_color, [0x00, 0x00, 0x00, 0xFF]);
         assert_eq!(cfg.font_size, 18.0);
     }
 
@@ -293,13 +382,17 @@ mod tests {
         let cfg = parse(concat!(
             "refresh_interval_ms = 250\n",
             "anchor_position = [200, 100]\n",
+            "startup_position = \"bottom_left\"\n",
             "background_color = \"#FFFFFFFF\"\n",
+            "font_color = \"#000000FF\"\n",
             "font_size = 22.0\n",
             "draggable = true\n",
         ));
         assert_eq!(cfg.refresh_interval, Duration::from_millis(250));
         assert_eq!(cfg.anchor, Anchor::VirtualScreen { x: 200, y: 100 });
+        assert_eq!(cfg.startup_position, StartupPosition::BottomLeft);
         assert_eq!(cfg.background_color, [0xFF, 0xFF, 0xFF, 0xFF]);
+        assert_eq!(cfg.font_color, [0x00, 0x00, 0x00, 0xFF]);
         assert_eq!(cfg.font_size, 22.0);
         assert!(cfg.draggable);
     }

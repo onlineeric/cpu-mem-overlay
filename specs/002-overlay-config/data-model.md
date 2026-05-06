@@ -15,19 +15,30 @@ A snapshot of resolved user preferences, read once at startup and held immutably
 | Field                 | Type      | Domain                                  | Default                          | Source FRs |
 |-----------------------|-----------|-----------------------------------------|----------------------------------|------------|
 | `refresh_interval`    | `Duration`| `>= 100 ms`                             | `1000 ms`                        | FR-007, FR-009 |
-| `anchor`              | `Anchor`  | `Default` or `VirtualScreen { x, y }`   | `Anchor::Default`                | FR-010, FR-011 |
+| `anchor`              | `Anchor`  | `Default` or `VirtualScreen { x, y }`   | `Anchor::Default`                | FR-010, FR-012 |
+| `startup_position`    | `StartupPosition` | `BottomRight` or `BottomLeft`  | `BottomRight`                    | FR-011, FR-011a |
 | `background_color`    | `[u8; 4]` | `[r, g, b, a]`, each `0..=255`          | `[0, 0, 0, 0]` (fully transparent — only the metric text renders) | FR-013, FR-015 |
+| `font_color`          | `[u8; 4]` | `[r, g, b, a]`, each `0..=255`          | `[255, 255, 255, 255]` (white)   | FR-018a |
 | `font_size`           | `f32`     | `> 0.0` and `<= 256.0` (sane upper)     | `14.0` (v1 baseline)             | FR-016, FR-018 |
 | `draggable`           | `bool`    | `true` / `false`                        | `false`                          | FR-021 |
 
 ### Sub-type: `Anchor`
 
 ```text
-Anchor::Default                       // bottom-right of primary monitor's work area, computed at startup
+Anchor::Default                       // use StartupPosition, computed at startup
 Anchor::VirtualScreen { x: i32, y: i32 }   // user-supplied virtual-screen coordinates
 ```
 
-`Anchor::Default` is a marker; the actual pixel position is computed once at window-build time via the v1 `primary_work_area_bottom_right` helper. `VirtualScreen` carries the user-supplied coordinates verbatim; if the resulting window rect doesn't overlap any work area (per R2-003), the window is built with `Anchor::Default` instead (silent fallback per FR-012).
+`Anchor::Default` is a marker; the actual pixel position is computed once at window-build time from `startup_position`. `VirtualScreen` carries the user-supplied coordinates verbatim; if the resulting window rect doesn't overlap any work area (per R2-003), the window is built with `Anchor::Default` instead (silent fallback per FR-012).
+
+### Sub-type: `StartupPosition`
+
+```text
+StartupPosition::BottomRight          // bottom-right of primary monitor's work area
+StartupPosition::BottomLeft           // bottom-left of primary monitor's work area
+```
+
+Both startup corners use the primary monitor work area, not the full screen rect, so a bottom taskbar is avoided.
 
 ### Validation rules
 
@@ -37,7 +48,9 @@ Resolution flow (per R2-009): `RawOverlayConfig` (all-`Option`) → per-field va
 |-----------------------|---------------------------------------------------------------------------------------------|
 | `refresh_interval_ms` | Must parse as `u64` and be `>= 100`. Else default.                                          |
 | `anchor_position`     | Must parse as a 2-element `[i32, i32]`. Else default. (On-screen check happens at window build, not validation, because it depends on the live monitor configuration.) |
+| `startup_position`    | Must parse as `"bottom_right"` or `"bottom_left"`. Else default (`"bottom_right"`).          |
 | `background_color`    | Must parse as `"#RRGGBB"` (alpha defaults to `0xFF`) or `"#RRGGBBAA"`, case-insensitive. Else default. |
+| `font_color`          | Must parse as `"#RRGGBB"` (alpha defaults to `0xFF`) or `"#RRGGBBAA"`, case-insensitive. Else default (`"#FFFFFF"`). |
 | `font_size`           | Must be a finite `f32` in `(0.0, 256.0]`. NaN, infinity, `<= 0.0`, or `> 256.0` → default.  |
 | `draggable`           | Must be a TOML boolean. Anything else → default (`false`).                                  |
 
@@ -61,7 +74,9 @@ Pure deserialization shape. Every field is `Option<T>` so that a missing key pro
 struct RawOverlayConfig {
     refresh_interval_ms: Option<u64>,
     anchor_position:     Option<[i32; 2]>,
+    startup_position:    Option<String>,
     background_color:    Option<String>,
+    font_color:          Option<String>,
     font_size:           Option<f32>,
     draggable:           Option<bool>,
 }

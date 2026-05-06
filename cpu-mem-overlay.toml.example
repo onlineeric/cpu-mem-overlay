@@ -9,19 +9,29 @@
 # Refresh cadence in milliseconds. Positive integer >= 100. Default: 1000.
 refresh_interval_ms = 1000
 
+# Startup corner for the overlay when anchor_position is omitted or invalid.
+# Accepted values: "bottom_right", "bottom_left".
+# Both corners are computed from the primary monitor's work area, so the
+# overlay sits above the taskbar. Default: "bottom_right".
+startup_position = "bottom_right"
+
 # Top-left position of the overlay in virtual-screen pixel coordinates [x, y].
 # Origin is the primary monitor's top-left; negative values are valid for
 # monitors positioned above or to the left of the primary monitor.
 # If the resulting window would lie entirely outside every monitor's work
-# area, the overlay falls back to the bottom-right of the primary monitor's
-# work area.
-# Default: (computed at startup) bottom-right of the primary monitor's work area.
+# area, the overlay falls back to startup_position.
+# Default: omitted (use startup_position).
 # anchor_position = [200, 100]
 
 # RGBA background color. "#RRGGBB" implies alpha = FF (opaque).
 # "#RRGGBBAA" sets alpha explicitly; "00" alpha = fully transparent.
 # Default: "#00000000" (fully transparent — only the metric text is rendered).
 # background_color = "#00000000"
+
+# RGBA font color for both metric lines.
+# Reference colors: black = "#000000", white = "#FFFFFF".
+# Default: "#FFFFFF" (white).
+font_color = "#FFFFFF"
 
 # Font size for both metric lines (logical pixels). Positive number, max 256.
 # The window auto-fits to contain both lines without clipping. Default: 14.

@@ -37,7 +37,7 @@ Run through the items below in order. Each maps to one or more acceptance scenar
 
 1. Ensure no `cpu-mem-overlay.toml` exists next to the built executable (typically `target/release/cpu-mem-overlay.exe`).
 2. Run the binary.
-3. **Expected**: overlay appears in the bottom-left corner of the primary monitor's work area (v2 default), fully transparent background (only the two metric lines visible over the desktop), default font size, refresh once per second.
+3. **Expected**: overlay appears in the bottom-right corner of the primary monitor's work area (v1-equivalent default), fully transparent background (only the two metric lines visible over the desktop), default font size, refresh once per second.
 
 ### Step 2 — Custom refresh interval
 
@@ -69,6 +69,17 @@ Run through the items below in order. Each maps to one or more acceptance scenar
 2. Run the binary.
 3. **Expected**: top-left of the overlay sits at virtual-screen coordinates (400, 50).
 
+### Step 4b — Startup corner
+
+1. Place:
+
+   ```toml
+   startup_position = "bottom_left"
+   ```
+
+2. Run the binary.
+3. **Expected**: overlay appears at the bottom-left of the primary monitor's work area, above the taskbar. Change to `startup_position = "bottom_right"` and relaunch; the overlay returns to the v1 default corner.
+
 ### Step 5 — Custom anchor (secondary monitor, if available)
 
 1. With a multi-monitor setup, find a coordinate that lies on a secondary monitor (e.g., `[2400, 100]` if a 1920-wide primary is to the left of the secondary).
@@ -85,11 +96,12 @@ Run through the items below in order. Each maps to one or more acceptance scenar
 1. Configure:
 
    ```toml
+   startup_position = "bottom_left"
    anchor_position = [999999, 999999]
    ```
 
 2. Run.
-3. **Expected**: overlay appears at the v1 default (bottom-right of primary work area). No error, no log message.
+3. **Expected**: overlay appears at the configured startup position (bottom-left of primary work area). No error, no log message.
 
 ### Step 7 — Transparent background
 
@@ -119,6 +131,19 @@ Run through the items below in order. Each maps to one or more acceptance scenar
 2. Run.
 3. **Expected**: both lines render at roughly double the default size; the overlay window has grown to contain them without clipping or wrapping.
 
+### Step 8b — Font color
+
+1. Configure:
+
+   ```toml
+   background_color = "#FFFFFF"
+   font_color = "#000000"
+   ```
+
+2. Run.
+3. **Expected**: both metric lines render black on a white background.
+4. Change `font_color = "#FFFFFF"` and use a dark background; both metric lines render white.
+
 ### Step 9 — Drag enabled
 
 1. Configure:
@@ -142,10 +167,11 @@ Run through the items below in order. Each maps to one or more acceptance scenar
    ```toml
    refresh_interval_ms = 500
    background_color = "not a color"
+   font_color = "#000000"
    ```
 
 2. Run.
-3. **Expected**: refresh runs at 500 ms; background is the v1 default opaque color (single-key rollback, FR-004).
+3. **Expected**: refresh runs at 500 ms; font renders black; background falls back to the fully transparent default (single-key rollback, FR-004).
 
 ### Step 12 — Unparseable TOML
 

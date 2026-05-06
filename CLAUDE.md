@@ -22,7 +22,7 @@ All commands run from the repository root (`C:\repos\cpu-mem-overlay`). The plat
 | Run the overlay | `cargo run --release` |
 | Run all unit tests | `cargo test` |
 | Run a single test | `cargo test cpu_some_hundred` (substring match against test fn name) |
-| Run only tests in `main.rs`'s `tests` module | `cargo test --bin cpu-mem-overlay tests::` |
+| Run tests in the binary crate | `cargo test --bin cpu-mem-overlay` |
 | Lint | `cargo clippy --all-targets -- -D warnings` |
 | Format | `cargo fmt` |
 
@@ -30,22 +30,25 @@ There is no in-app close affordance by design (FR-007). Stop the running overlay
 
 ## Architecture
 
-This is a **single Rust `bin` crate** at the repo root (`Cargo.toml` + `src/main.rs`, ~150 LOC). There is no library split, no workspace, no submodules. The pre-existing empty `rust-test/` directory is unrelated to this feature.
+This is a **single Rust `bin` crate** at the repo root (`Cargo.toml` + `src/`). There is no library crate, no workspace, and no submodules, but the binary is split into small internal modules because v2 added config parsing, monitor enumeration, and GUI behavior beyond the original v1 single-file app.
 
-The whole feature is structured as four small concerns inside `src/main.rs`:
+The current feature is structured across these concerns:
 
-1. **`MetricSnapshot { cpu: Option<u8>, memory: Option<u8> }`** — the only in-memory entity. `Some(0..=100)` for a valid reading, `None` for "unavailable on this tick" (covers the very first CPU tick before `sysinfo` has a usable reading, and any transient read failure). Per-field, so one metric can fall back to `--` while the other still renders normally.
-2. **`Sampler`** — wraps a `sysinfo::System`. Calls `refresh_cpu_usage()` and `refresh_memory()` once at startup and again each tick, then derives a `MetricSnapshot` via the pure helpers `read_cpu_pct` / `read_memory_pct` (which clamp to `0..=100` and convert non-finite values to `None` defensively).
-3. **`OverlayApp` (`impl eframe::App`)** — the GUI. Each `update()` call samples once, renders two `egui::Label`s, and **schedules the next repaint via `ctx.request_repaint_after(Duration::from_secs(1))`**. This is the entire refresh loop — no background thread, no OS timer. When idle, `eframe` parks the event loop until the next scheduled repaint, which is what keeps steady-state CPU near 0%.
-4. **`primary_work_area_bottom_right`** — one-shot Win32 call to `SystemParametersInfoW(SPI_GETWORKAREA, …)` (via the `windows` crate) to compute the bottom-right anchor of the *work area* (not the full screen rect, so the overlay doesn't overlap the taskbar). Falls back to a hardcoded 1920×1040 origin if the call fails.
+1. **`src/config.rs`** — reads `<exe-dir>/cpu-mem-overlay.toml` exactly once at startup. Missing file, unparseable TOML, unknown keys, and per-field invalid values silently fall back to defaults. Supported keys are `refresh_interval_ms`, `startup_position`, `anchor_position`, `background_color`, `font_color`, `font_size`, and `draggable`.
+2. **`OverlayConfig` / `Anchor` / `StartupPosition`** — the resolved config state. `startup_position` accepts `bottom_right` (default, matching v1) or `bottom_left`; both are taskbar-aware primary-work-area anchors. `anchor_position = [x, y]` remains an explicit virtual-screen coordinate override and falls back to `startup_position` if it is entirely outside all monitor work areas.
+3. **`src/color.rs`** — parses config colors as `"#RRGGBB"` (opaque) or `"#RRGGBBAA"` (explicit alpha). `background_color` defaults to fully transparent `#00000000`; `font_color` defaults to white `#FFFFFF`.
+4. **`src/sampler.rs`** — owns `MetricSnapshot { cpu: Option<u8>, memory: Option<u8> }` and `Sampler`. Percentages clamp to `0..=100`; non-finite or unavailable values become `None`, rendered as `--`.
+5. **`src/app.rs`** — owns `OverlayApp` (`impl eframe::App`), window-size calculation, primary work-area corner helpers, optional drag handling, configured background/font colors, and elapsed-time-gated sampling. `update()` samples only when `refresh_interval` has elapsed, then schedules the next repaint with `ctx.request_repaint_after(...)`; mouse hover/movement must not accelerate metric reads.
+6. **`src/monitors.rs`** — enumerates monitor work areas with Win32 `EnumDisplayMonitors` / `GetMonitorInfoW` and provides the pure `is_on_any_work_area` overlap check for validating configured anchors.
+7. **`src/main.rs`** — loads config, computes window size and resolved startup position, builds `egui::ViewportBuilder`, and runs `eframe`.
 
-Window setup happens in `main()` via `egui::ViewportBuilder` with `.with_decorations(false)`, `.with_resizable(false)`, `.with_window_level(egui::WindowLevel::AlwaysOnTop)`, fixed `WINDOW_SIZE`, and the computed position. The binary is built as a Windows GUI subsystem app (`#![cfg_attr(not(test), windows_subsystem = "windows")]`) so launching it doesn't open a console.
+Window setup happens in `main()` via `egui::ViewportBuilder` with `.with_decorations(false)`, `.with_resizable(false)`, `.with_inner_size(compute_window_size(config.font_size))`, `.with_position(resolve_position(...))`, `.with_window_level(egui::WindowLevel::AlwaysOnTop)`, and `.with_transparent(true)`. The binary is built as a Windows GUI subsystem app (`#![cfg_attr(not(test), windows_subsystem = "windows")]`) so launching it from Explorer does not open a console.
 
-Pure logic (`format_line`, percentage clamping, `--` fallback) is unit-tested at the bottom of `src/main.rs`. GUI behavior (borderless, always-on-top, position, refresh cadence) is verified by eye against `specs/001-cpu-mem-overlay/contracts/ui-contract.md` — automated GUI testing is intentionally out of scope for v1 (R-008 in `research.md`).
+Pure logic is unit-tested in each module (`config`, `color`, `sampler`, `monitors`, and `app`). GUI behavior (borderless, always-on-top, transparent background, font color, drag, taskbar-aware startup corners, and refresh cadence) is verified manually against `specs/002-overlay-config/contracts/ui-contract.md`; automated GUI testing remains out of scope.
 
 ## Spec Kit workflow
 
-This repo uses Spec Kit. Feature work flows through `specs/<NNN-feature-name>/` artifacts (`spec.md` → `plan.md` → `tasks.md` → implementation). The current and only feature is `specs/001-cpu-mem-overlay/`; its `plan.md`, `research.md`, `data-model.md`, and `contracts/ui-contract.md` are the authoritative source for design decisions.
+This repo uses Spec Kit. Feature work flows through `specs/<NNN-feature-name>/` artifacts (`spec.md` → `plan.md` → `tasks.md` → implementation). The current active feature is `specs/002-overlay-config/`; its `plan.md`, `research.md`, `data-model.md`, `quickstart.md`, and `contracts/ui-contract.md` are the authoritative source for v2 design decisions. `specs/001-cpu-mem-overlay/` remains the v1 baseline reference.
 
 The project constitution at `.specify/memory/constitution.md` defines four NON-NEGOTIABLE-or-strong gates that apply to every change:
 

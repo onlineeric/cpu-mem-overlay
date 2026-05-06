@@ -3,7 +3,7 @@
 //! Wraps Win32 `EnumDisplayMonitors` + `GetMonitorInfoW` to compute the
 //! union of all visible monitor work areas. Used to decide whether a
 //! configured `anchor_position` overlaps any visible work area or should
-//! roll back to the default anchor (FR-012). The pure overlap helper
+//! roll back to the configured startup position (FR-012). The pure overlap helper
 //! (`is_on_any_work_area`) is unit-tested against synthetic rectangles;
 //! `enumerate_work_areas` is exercised by the live overlay only.
 
