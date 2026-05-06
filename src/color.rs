@@ -1,4 +1,4 @@
-//! Hex-string color parsing for the `background_color` config key.
+//! Hex-string color parsing for color config keys.
 //!
 //! Accepts `"#RRGGBB"` (alpha defaults to `0xFF`) and `"#RRGGBBAA"`,
 //! case-insensitive. Returns an opaque `Err` when the input does not match

@@ -1,6 +1,6 @@
 //! GUI app entry: window setup helpers and the `eframe::App` impl.
 //!
-//! Owns the rendering loop, the v1 default-anchor computation, the
+//! Owns the rendering loop, the startup-corner anchor computation, the
 //! interval-gated sampling logic (so input events do NOT drive extra metric
 //! reads — FR-019/FR-020), and the optional drag-to-reposition handling
 //! (FR-021..FR-024). Pure helpers (`compute_window_size`, `should_sample`)
@@ -10,16 +10,21 @@ use std::time::{Duration, Instant};
 
 use eframe::{egui, App, Frame};
 
-use crate::config::OverlayConfig;
+use crate::config::{OverlayConfig, StartupPosition};
 use crate::sampler::{format_line, MetricSnapshot, Sampler};
 
 pub(crate) const POSITION_MARGIN_PX: f32 = 12.0;
-const WORK_AREA_BOTTOM_LEFT_X_OFFSET_PX: f32 = 150.0;
-const WORK_AREA_BOTTOM_LEFT_Y_OFFSET_PX: f32 = 55.0;
 
 const V1_FONT_SIZE: f32 = 14.0;
 const V1_WINDOW_WIDTH: f32 = 96.0;
 const V1_WINDOW_HEIGHT: f32 = 44.0;
+
+#[derive(Debug, Clone, Copy)]
+struct WorkAreaBounds {
+    left: f32,
+    right: f32,
+    bottom: f32,
+}
 
 pub(crate) fn compute_window_size(font_size: f32) -> egui::Vec2 {
     let scale = font_size / V1_FONT_SIZE;
@@ -33,7 +38,11 @@ pub(crate) fn should_sample(now: Instant, last_sample_at: Instant, interval: Dur
     now.saturating_duration_since(last_sample_at) >= interval
 }
 
-pub(crate) fn primary_work_area_bottom_left(window_size: egui::Vec2, margin_px: f32) -> egui::Pos2 {
+fn primary_work_area_position(
+    startup_position: StartupPosition,
+    window_size: egui::Vec2,
+    margin_px: f32,
+) -> egui::Pos2 {
     use core::ffi::c_void;
     use windows::Win32::Foundation::RECT;
     use windows::Win32::UI::WindowsAndMessaging::{
@@ -50,13 +59,52 @@ pub(crate) fn primary_work_area_bottom_left(window_size: egui::Vec2, margin_px: 
         )
     };
     if result.is_err() {
-        let x = WORK_AREA_BOTTOM_LEFT_X_OFFSET_PX + margin_px;
-        let y = 1040.0 - window_size.y - margin_px + WORK_AREA_BOTTOM_LEFT_Y_OFFSET_PX;
-        return egui::pos2(x.max(0.0), y.max(0.0));
+        return position_in_work_area(
+            WorkAreaBounds {
+                left: 0.0,
+                right: 1920.0,
+                bottom: 1040.0,
+            },
+            startup_position,
+            window_size,
+            margin_px,
+        );
     }
 
-    let x = rect.left as f32 + WORK_AREA_BOTTOM_LEFT_X_OFFSET_PX + margin_px;
-    let y = rect.bottom as f32 - window_size.y - margin_px + WORK_AREA_BOTTOM_LEFT_Y_OFFSET_PX;
+    position_in_work_area(
+        WorkAreaBounds {
+            left: rect.left as f32,
+            right: rect.right as f32,
+            bottom: rect.bottom as f32,
+        },
+        startup_position,
+        window_size,
+        margin_px,
+    )
+}
+
+pub(crate) fn primary_work_area_bottom_right(
+    window_size: egui::Vec2,
+    margin_px: f32,
+) -> egui::Pos2 {
+    primary_work_area_position(StartupPosition::BottomRight, window_size, margin_px)
+}
+
+pub(crate) fn primary_work_area_bottom_left(window_size: egui::Vec2, margin_px: f32) -> egui::Pos2 {
+    primary_work_area_position(StartupPosition::BottomLeft, window_size, margin_px)
+}
+
+fn position_in_work_area(
+    work_area: WorkAreaBounds,
+    startup_position: StartupPosition,
+    window_size: egui::Vec2,
+    margin_px: f32,
+) -> egui::Pos2 {
+    let x = match startup_position {
+        StartupPosition::BottomLeft => work_area.left + margin_px,
+        StartupPosition::BottomRight => work_area.right - window_size.x - margin_px,
+    };
+    let y = work_area.bottom - window_size.y - margin_px;
     egui::pos2(x.max(0.0), y.max(0.0))
 }
 
@@ -66,6 +114,7 @@ pub(crate) struct OverlayApp {
     snapshot: MetricSnapshot,
     last_sample_at: Instant,
     background: egui::Color32,
+    font_color: egui::Color32,
 }
 
 impl OverlayApp {
@@ -75,12 +124,14 @@ impl OverlayApp {
             .checked_sub(config.refresh_interval)
             .unwrap_or_else(Instant::now);
         let [r, g, b, a] = config.background_color;
+        let [font_r, font_g, font_b, font_a] = config.font_color;
         Self {
             config,
             sampler: Sampler::new(),
             snapshot: MetricSnapshot::default(),
             last_sample_at,
             background: egui::Color32::from_rgba_unmultiplied(r, g, b, a),
+            font_color: egui::Color32::from_rgba_unmultiplied(font_r, font_g, font_b, font_a),
         }
     }
 }
@@ -119,6 +170,7 @@ impl App for OverlayApp {
                     ui.add(
                         egui::Label::new(
                             egui::RichText::new(format_line("CPU", self.snapshot.cpu))
+                                .color(self.font_color)
                                 .size(self.config.font_size),
                         )
                         .selectable(false),
@@ -126,6 +178,7 @@ impl App for OverlayApp {
                     ui.add(
                         egui::Label::new(
                             egui::RichText::new(format_line("MEM", self.snapshot.memory))
+                                .color(self.font_color)
                                 .size(self.config.font_size),
                         )
                         .selectable(false),
@@ -208,5 +261,37 @@ mod tests {
     fn should_sample_zero_interval_always_true() {
         let base = Instant::now();
         assert!(should_sample(base, base, Duration::ZERO));
+    }
+
+    #[test]
+    fn bottom_right_position_uses_work_area_bottom_edge() {
+        let pos = position_in_work_area(
+            WorkAreaBounds {
+                left: 0.0,
+                right: 1920.0,
+                bottom: 1040.0,
+            },
+            StartupPosition::BottomRight,
+            egui::vec2(96.0, 44.0),
+            12.0,
+        );
+
+        assert_eq!(pos, egui::pos2(1812.0, 984.0));
+    }
+
+    #[test]
+    fn bottom_left_position_uses_same_work_area_bottom_edge() {
+        let pos = position_in_work_area(
+            WorkAreaBounds {
+                left: 0.0,
+                right: 1920.0,
+                bottom: 1040.0,
+            },
+            StartupPosition::BottomLeft,
+            egui::vec2(96.0, 44.0),
+            12.0,
+        );
+
+        assert_eq!(pos, egui::pos2(12.0, 984.0));
     }
 }

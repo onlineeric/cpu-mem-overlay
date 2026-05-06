@@ -25,13 +25,14 @@ A user wants to adapt the overlay to their own desktop setup — different refre
 
 **Acceptance Scenarios**:
 
-1. **Given** no `cpu-mem-overlay.toml` exists next to the executable, **When** the user launches the overlay, **Then** the overlay starts with v2 defaults (1000 ms refresh, bottom-left of the primary monitor's work area, fully transparent background — only the metric text is visible — and v1 text size) and runs without error.
-2. **Given** a valid `cpu-mem-overlay.toml` is present with a complete set of supported keys, **When** the user launches the overlay, **Then** every configured value is applied and the overlay reflects all four settings simultaneously.
+1. **Given** no `cpu-mem-overlay.toml` exists next to the executable, **When** the user launches the overlay, **Then** the overlay starts with v2 defaults (1000 ms refresh, bottom-right of the primary monitor's work area, fully transparent background — only the metric text is visible — and v1 text size) and runs without error.
+2. **Given** a valid `cpu-mem-overlay.toml` is present with a complete set of supported keys, **When** the user launches the overlay, **Then** every configured value is applied and the overlay reflects all supported settings simultaneously.
 3. **Given** a `cpu-mem-overlay.toml` is present but contains an invalid value for one setting (e.g., a negative refresh interval), **When** the user launches the overlay, **Then** only that setting reverts to its default and the remaining settings still take effect; the overlay starts without crashing.
 4. **Given** a `cpu-mem-overlay.toml` is present whose entire contents cannot be parsed as TOML, **When** the user launches the overlay, **Then** the overlay starts using all defaults and runs without error.
-5. **Given** the configured `anchor_position` would place the overlay entirely off every visible monitor's work area, **When** the user launches the overlay, **Then** the overlay appears at the default anchor position instead.
+5. **Given** the configured `anchor_position` would place the overlay entirely off every visible monitor's work area, **When** the user launches the overlay, **Then** the overlay appears at the configured startup position instead.
 6. **Given** the configured `background_color` has zero alpha (fully transparent), **When** the user launches the overlay, **Then** only the text is rendered on top of the desktop content beneath the overlay, with no visible background fill.
 7. **Given** `font_size` is configured to a clearly larger value than the default, **When** the user launches the overlay, **Then** both metric lines render at the larger size and the window automatically expands to contain them without truncation.
+8. **Given** `font_color` is configured to black or white, **When** the user launches the overlay, **Then** both metric lines render in the configured color.
 
 ---
 
@@ -78,6 +79,7 @@ A user occasionally wants to nudge the overlay out of the way of an open window 
 - **`anchor_position` partially off-screen**: Still considered valid as long as some portion of the window overlaps a visible work area; only entirely-off-screen configurations roll back to default.
 - **Multi-monitor setups**: `anchor_position` is in absolute virtual-screen pixel coordinates; the off-screen check considers the union of all monitor work areas.
 - **`background_color` with alpha = 0**: Window background is fully transparent; the metric text remains opaque and readable. The overlay still captures mouse input over its pixel rectangle (hover, click, drag) — alpha = 0 affects only rendering, not input routing.
+- **`font_color` with alpha = 0**: Text can be made fully transparent by configuration; this affects rendering only and does not change window input behavior.
 - **`font_size` value that grows the text beyond the v1 window size**: The window auto-resizes so both lines remain fully visible.
 - **`draggable = true` combined with a transparent background**: The user can still grab and drag the window over the area occupied by the (transparent) tile.
 - **Long-running session with non-default settings**: All v1 long-run guarantees (no leaks, no drift, recovery from transient metric-read failures) still hold.
@@ -102,11 +104,12 @@ A user occasionally wants to nudge the overlay out of the way of an open window 
 - **FR-008**: A configured `refresh_interval_ms` MUST control both the metric sampling cadence and the on-screen update cadence so the two stay aligned.
 - **FR-009**: Values for `refresh_interval_ms` outside the supported range (see Assumptions for the minimum) MUST be treated as invalid per FR-004.
 
-#### Configurable anchor position
+#### Configurable startup position and anchor position
 
 - **FR-010**: The overlay MUST support an `anchor_position` setting describing the top-left on-screen coordinate (X and Y in pixels) at which the overlay window appears on launch. Coordinates are interpreted in **virtual-screen space**: a single (X, Y) pair across all monitors, origin at the primary monitor's top-left, with negative values valid for monitors positioned above or to the left of the primary monitor.
-- **FR-011**: The default `anchor_position` MUST place the overlay at the bottom-right of the primary monitor's work area (matching v1).
-- **FR-012**: If the configured `anchor_position` would place the entire overlay window outside the union of all visible monitor work areas, the overlay MUST fall back to the default anchor position.
+- **FR-011**: The default startup position MUST place the overlay at the bottom-right of the primary monitor's work area (matching v1).
+- **FR-011a**: The overlay MUST support a `startup_position` setting with accepted values `bottom_right` and `bottom_left`. Both values MUST be computed against the primary monitor work area so the overlay does not overlap the taskbar.
+- **FR-012**: If the configured `anchor_position` would place the entire overlay window outside the union of all visible monitor work areas, the overlay MUST fall back to the configured `startup_position`.
 
 #### Configurable background color (incl. transparency)
 
@@ -120,6 +123,7 @@ A user occasionally wants to nudge the overlay out of the way of an open window 
 - **FR-016**: The overlay MUST support a `font_size` setting (positive number) controlling the rendered size of both the CPU and the MEM lines.
 - **FR-017**: When `font_size` differs from the default, the overlay window MUST automatically resize so both lines render fully without clipping or wrapping.
 - **FR-018**: The default `font_size` MUST reproduce v1's text size when the key is omitted.
+- **FR-018a**: The overlay MUST support a `font_color` setting for both metric lines, parsed with the same RGBA hex format as `background_color`. The default `font_color` MUST be white (`#FFFFFF`) when the config file or key is missing or invalid.
 
 #### Refresh cadence not driven by user input
 
@@ -139,7 +143,7 @@ A user occasionally wants to nudge the overlay out of the way of an open window 
 
 ### Key Entities
 
-- **Overlay Configuration**: A snapshot of user preferences read once at startup, comprising `refresh_interval_ms`, `anchor_position` (X, Y), `background_color` (with alpha), `font_size`, and `draggable`. Each field is independently optional; missing or invalid fields fall back to documented defaults.
+- **Overlay Configuration**: A snapshot of user preferences read once at startup, comprising `refresh_interval_ms`, `startup_position`, `anchor_position` (X, Y), `background_color` (with alpha), `font_color` (with alpha), `font_size`, and `draggable`. Each field is independently optional; missing or invalid fields fall back to documented defaults.
 - **System Metric Reading** *(carried over from v1)*: A snapshot of system state at a given instant, with CPU and memory percentages or per-field unavailability markers.
 
 ## Success Criteria *(mandatory)*
@@ -150,9 +154,10 @@ A user occasionally wants to nudge the overlay out of the way of an open window 
 - **SC-002**: When `refresh_interval_ms` is set to a value N (within the supported range), the displayed values change exactly once every N ms (±1 tick) over a 1-minute observation, regardless of mouse activity over the overlay.
 - **SC-003**: With the mouse continuously moving over the overlay tile for at least 30 seconds, the displayed CPU and MEM values change no more often than once per configured interval (i.e., the v1 hover-driven extra refresh is gone).
 - **SC-004**: When `anchor_position` is set to any valid coordinate that overlaps a visible monitor work area, the overlay appears at that coordinate within 3 seconds of launch.
-- **SC-005**: When `anchor_position` is set to a coordinate that places the entire window outside every monitor's work area, the overlay appears at the default anchor position instead, without errors.
+- **SC-005**: When `anchor_position` is set to a coordinate that places the entire window outside every monitor's work area, the overlay appears at the configured startup position instead, without errors.
 - **SC-006**: When `background_color` is set to a fully transparent value, a screenshot of the overlay region shows the desktop content beneath through the window background, with the metric text still legible.
 - **SC-007**: When `font_size` is set to roughly double the default, both metric lines render at the larger size and the overlay window expands to contain them without clipping; reverting to the default reproduces the v1 footprint.
+- **SC-007a**: When `font_color` is set to `#000000` or `#FFFFFF`, both metric lines render in the configured black or white color.
 - **SC-008**: With `draggable = true`, the user can drag the overlay to any visible screen position with the mouse, and the overlay stays at the released position for the remainder of that session.
 - **SC-009**: With `draggable = false` (or unset), no mouse drag action moves the overlay from its launch position.
 - **SC-010**: When a single config value is invalid (e.g., negative refresh interval, malformed color) while the rest are valid, the overlay launches successfully, ignores only the invalid value, and applies all other configured values.
@@ -166,6 +171,7 @@ A user occasionally wants to nudge the overlay out of the way of an open window 
 - The supported minimum for `refresh_interval_ms` is **100 ms**; values below that are treated as invalid (per FR-004) so the overlay cannot be configured into a state that perceptibly impacts system performance. There is no documented maximum beyond positive-integer range.
 - `anchor_position` uses absolute virtual-screen pixel coordinates with the origin at the top-left of the primary monitor; the off-screen check considers the union of all monitor work areas.
 - `background_color` accepts an RGBA representation (color components plus an alpha component). The exact serialization (hex string vs. component array) is an implementation detail chosen during planning; whichever is chosen, both fully-opaque and fully-transparent values must be expressible.
+- `font_color` accepts the same RGBA representation as `background_color`, defaulting to white when omitted or invalid.
 - `font_size` is expressed in the implementation's natural unit for label text (e.g., logical points/pixels). The exact unit is an implementation detail; the spec only requires that doubling the value produces visibly larger text and an auto-fit window. Implementations MAY enforce a defensive upper bound (e.g., 256) so a typo cannot create a window larger than the screen; values exceeding that bound are treated as invalid per FR-004.
 - Drag is in-session only; the overlay never writes to the config file.
 - All v1 assumptions (single primary monitor expected for the default position, overall-system metric semantics, no elevated privileges, manual termination via OS) continue to hold.

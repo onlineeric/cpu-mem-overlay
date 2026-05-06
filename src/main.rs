@@ -9,9 +9,10 @@ mod sampler;
 use eframe::{egui, App};
 
 use crate::app::{
-    compute_window_size, primary_work_area_bottom_left, OverlayApp, POSITION_MARGIN_PX,
+    compute_window_size, primary_work_area_bottom_left, primary_work_area_bottom_right, OverlayApp,
+    POSITION_MARGIN_PX,
 };
-use crate::config::{load_from_exe_dir, Anchor, OverlayConfig};
+use crate::config::{load_from_exe_dir, Anchor, OverlayConfig, StartupPosition};
 use crate::monitors::{enumerate_work_areas, is_on_any_work_area, WindowRect};
 
 fn main() -> eframe::Result<()> {
@@ -52,9 +53,23 @@ fn resolve_position(config: &OverlayConfig, window_size: egui::Vec2) -> egui::Po
             if is_on_any_work_area(candidate, &enumerate_work_areas()) {
                 egui::pos2(x as f32, y as f32)
             } else {
-                primary_work_area_bottom_left(window_size, POSITION_MARGIN_PX)
+                resolve_startup_position(config.startup_position, window_size)
             }
         }
-        Anchor::Default => primary_work_area_bottom_left(window_size, POSITION_MARGIN_PX),
+        Anchor::Default => resolve_startup_position(config.startup_position, window_size),
+    }
+}
+
+fn resolve_startup_position(
+    startup_position: StartupPosition,
+    window_size: egui::Vec2,
+) -> egui::Pos2 {
+    match startup_position {
+        StartupPosition::BottomLeft => {
+            primary_work_area_bottom_left(window_size, POSITION_MARGIN_PX)
+        }
+        StartupPosition::BottomRight => {
+            primary_work_area_bottom_right(window_size, POSITION_MARGIN_PX)
+        }
     }
 }

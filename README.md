@@ -8,7 +8,7 @@ Written in Rust with [`eframe`/`egui`](https://github.com/emilk/egui) and [`sysi
 
 - Two-line readout: `CPU: NN%` and `MEM: NN%`, refreshing on a fixed cadence (default 1000 ms).
 - Always-on-top, undecorated, non-resizable window.
-- Anchored by default to the bottom-left of the primary monitor's work area (taskbar-aware).
+- Anchored by default to the bottom-right of the primary monitor's work area (taskbar-aware), with bottom-left available via config.
 - Fully configurable via a `cpu-mem-overlay.toml` file dropped next to the executable. All keys optional; missing or invalid values silently fall back to defaults.
 
 ## Build & run
@@ -28,8 +28,10 @@ Place `cpu-mem-overlay.toml` in the same directory as the built `cpu-mem-overlay
 
 ```toml
 refresh_interval_ms = 1000          # min 100
-anchor_position     = [100, 100]    # virtual-screen pixels; off-screen rolls back to default
+startup_position    = "bottom_right" # "bottom_right" or "bottom_left"
+anchor_position     = [100, 100]     # optional exact virtual-screen pixels; off-screen rolls back to startup_position
 background_color    = "#00000000"   # RGBA hex; alpha 00 = fully transparent
+font_color          = "#FFFFFF"     # RGBA hex; black "#000000", white "#FFFFFF"
 font_size           = 12.0          # max 256
 draggable           = false         # click-drag to reposition for the session
 ```

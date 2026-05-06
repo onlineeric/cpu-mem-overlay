@@ -51,9 +51,9 @@ Single Rust `bin` crate at the repository root: `src/` and (optionally) `tests/`
 
 ## Phase 3: User Story 1 — Customize the overlay via a config file (Priority: P1) 🎯 MVP
 
-**Goal**: Read `cpu-mem-overlay.toml` next to the executable at startup and apply `refresh_interval_ms`, `anchor_position`, `background_color` (incl. transparency), and `font_size`. Missing file, unparseable file, unknown keys, or any single invalid field falls back silently to the v1 default for that field.
+**Goal**: Read `cpu-mem-overlay.toml` next to the executable at startup and apply `refresh_interval_ms`, `startup_position`, `anchor_position`, `background_color` (incl. transparency), `font_color`, and `font_size`. Missing file, unparseable file, unknown keys, or any single invalid field falls back silently to the v1 default for that field.
 
-**Independent Test**: Place a `cpu-mem-overlay.toml` next to the built exe with a non-default value for each of the four supported settings. Launch — confirm each setting takes effect (different cadence visible, different on-screen position, different background color/opacity, different text size). Delete the file and relaunch — overlay behaves identically to v1. Spec acceptance scenarios 1–7 in spec.md §User Story 1.
+**Independent Test**: Place a `cpu-mem-overlay.toml` next to the built exe with a non-default value for each supported setting. Launch — confirm each setting takes effect (different cadence visible, different on-screen position, different background color/opacity, different font color, different text size). Delete the file and relaunch — overlay behaves identically to v1. Spec acceptance scenarios 1–8 in spec.md §User Story 1.
 
 ### Tests for User Story 1 ⚠️
 
